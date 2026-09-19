@@ -122,7 +122,7 @@ function App() {
   const [editingSkill, setEditingSkill] = useState(false)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'全部' | '双向匹配' | '线上可学'>('全部')
-  const [showAll, setShowAll] = useState(false)
+  const [partnerIndex, setPartnerIndex] = useState(0)
   const [inviteTime, setInviteTime] = useState('周三 20:00')
   const [message, setMessage] = useState('')
   const [toast, setToast] = useState('')
@@ -140,7 +140,7 @@ function App() {
     const timer = window.setTimeout(() => setToast(''), 2800)
     return () => window.clearTimeout(timer)
   }, [toast])
-  useEffect(() => { setShowAll(false) }, [query, filter])
+  useEffect(() => { setPartnerIndex(0) }, [query, filter, profile])
 
   const result = useMemo(() => partners
     .map(partner => ({ partner, status: getStatus(profile, partner), reasons: getReasons(profile, partner) }))
@@ -195,7 +195,6 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="ambient-art" aria-hidden="true"><i className="orb-coral" /><i className="orb-violet" /><i className="orb-mint" /></div>
       <header className="topbar">
         <button className="brand" onClick={() => go('discover')} aria-label="换一课首页"><span className="brand-mark"><Icon name="swap" /></span><span>换一课<small>SkillSwap</small></span></button>
         <nav aria-label="主导航">
@@ -210,34 +209,22 @@ function App() {
 
       <main>
         {view === 'discover' && <>
-          <section className="hero" aria-labelledby="page-title">
-            <p className="eyebrow">SKILL EXCHANGE · SMALL GOALS, REAL PROGRESS</p>
-            <h1 id="page-title"><span>用你会的，</span><strong>换你想学的。</strong></h1>
-            <p>把一次技能交换拆成明确的小目标，找到愿意彼此认真教一课的人。</p>
-            <div className="hero-stamps" aria-hidden="true"><span>双向互补 ✦</span><span>先约成第一课</span></div>
+          <section className="exchange-hero" aria-labelledby="page-title">
+            <div className="hero-copy"><p className="hero-label">你的一技之长，也能点亮别人。</p><h1 id="page-title">用你会的，<br /><em>换你想学的。</em></h1><p className="hero-description">找到技能互补的人，<br />交换一堂真正想学的课。</p><a className="hero-cta" href="#match-title">遇见互换伙伴 <Icon name="arrow" /></a><span className="hero-footnote">不必是专家。从你会的一件小事开始。</span></div>
+            <div className="hero-art"><img src={`${import.meta.env.BASE_URL}images/gumroad-side-project.svg`} alt="Gumroad 抽象漫画人物插画" /><span className="art-caption">一点拿手的，换一点新鲜的。</span><a className="art-credit" href="https://gumroad.com/" target="_blank" rel="noreferrer">Illustration: Gumroad ↗</a></div>
           </section>
 
-          <section className="need-card" aria-labelledby="need-title">
-            <div className="need-aside"><p className="section-kicker">YOUR EXCHANGE</p><h2 id="need-title">我的互换需求</h2><p>{profile.intro}</p><button className="link-button" onClick={() => setEditingSkill(true)}><Icon name="edit" /> 修改需求</button></div>
-            <div className="exchange-flow">
-              <article className="skill-side teach-side"><div className="side-title"><span className="mini-icon"><Icon name="bolt" /></span>我能教</div><h3>{profile.canTeach}</h3><p>{profile.teachGoal}</p></article>
-              <div className="swap-token" aria-label="互换"><Icon name="swap" /></div>
-              <article className="skill-side learn-side"><div className="side-title"><span className="mini-icon"><Icon name="spark" /></span>我想学</div><h3>{profile.wants}</h3><p>{profile.learnGoal}</p></article>
-              <div className="need-meta"><span><Icon name="video" />{profile.method}</span><span><Icon name="calendar" />{profile.time}</span><span><Icon name="clock" />默认各 30 分钟</span></div>
-            </div>
+          <section className="need-strip" aria-labelledby="need-title">
+            <div><h2 id="need-title">我的互换需求</h2><p>{profile.method} · {profile.time}</p></div><div className="need-skill"><span>我能教</span><strong>{profile.canTeach}</strong><p>{profile.teachGoal}</p></div><Icon name="swap" /><div className="need-skill"><span>我想学</span><strong>{profile.wants}</strong><p>{profile.learnGoal}</p></div><button className="secondary" onClick={() => setEditingSkill(true)}>修改需求</button>
           </section>
 
           <section className="matches" aria-labelledby="match-title">
-            <div className="match-heading"><div><p className="section-kicker">MATCH WORKBENCH</p><h2 id="match-title">找到下一位互换伙伴</h2><p>推荐理由来自双方真实字段，不用虚构匹配分数。</p></div><div className="result-count"><strong>{result.length}</strong><span>位演示伙伴</span></div></div>
-            <div className="filterbar"><label className="search"><Icon name="search" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索想学的技能、目标或昵称" /><kbd>⌘ K</kbd></label><div className="filter-pills">{(['全部', '双向匹配', '线上可学'] as const).map(item => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
-            {result.length ? <><div className={`partner-grid ${showAll ? 'expanded' : ''}`}>{result.slice(0, showAll ? result.length : 3).map(({ partner, status, reasons }, index) => <article className={`partner-card ${index === 0 && status === '双向匹配' ? 'featured-match' : ''}`} key={partner.id}>
-              <header className="partner-head"><div className={`avatar ${partner.avatar}`}>{partner.initial}</div><div><div className="name-line"><h3>{partner.name}</h3><span>演示用户</span></div><p>{partner.intro}</p></div><span className={`tag ${status === '双向匹配' ? 'mutual' : status === '时间待协商' ? 'pending' : status === '单向符合' ? 'oneway' : 'explore'}`}>{status}</span></header>
-              {index === 0 && <div className="best-ribbon">BEST MUTUAL MATCH</div>}
-              <div className="lesson-pair"><div className="teach"><span>TA 能教</span><strong>{partner.canTeach}</strong><p>{partner.teachGoal}</p></div><div className="learn"><span>TA 想学</span><strong>{partner.wants}</strong><p>{partner.learnGoal}</p></div></div>
-              <div className="availability"><span><Icon name="video" />{partner.method}</span><span><Icon name="calendar" />{partner.time}</span></div>
-              <div className="why"><h4>为什么推荐</h4><ul>{reasons.map(reason => <li key={reason}><Icon name="check" />{reason}</li>)}</ul></div>
-              <footer><button className="secondary" onClick={() => setDetail(partner)}>查看详情</button><button className="primary" onClick={() => beginInvite(partner)}>发起互换 <Icon name="arrow" /></button></footer>
-            </article>)}</div>{result.length > 3 && <div className="more-row"><div><span>{showAll ? '已展示全部演示伙伴' : `还有 ${result.length - 3} 位可探索伙伴`}</span><p>先聚焦最相关的人选，需要时再展开浏览。</p></div><button className="secondary more-button" onClick={() => setShowAll(value => !value)}>{showAll ? '收起更多伙伴' : '查看更多伙伴'} <Icon name="arrow" /></button></div>}</> : <div className="empty-state"><div><Icon name="search" /></div><h3>暂时没有符合当前条件的伙伴</h3><p>试试清空关键词或查看全部结果，也可以修改你的学习目标。</p><button className="primary" onClick={() => { setQuery(''); setFilter('全部') }}>查看全部伙伴</button></div>}
+            <div className="match-heading"><div><p className="section-kicker">MEET YOUR NEXT TEACHER</p><h2 id="match-title">下一课，跟谁学？</h2></div><p>从一个人、一个小目标开始。</p></div>
+            <div className="filterbar"><label className="search"><Icon name="search" /><input aria-label="搜索伙伴" value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索技能或昵称" /></label><div className="filter-pills">{(['全部', '双向匹配', '线上可学'] as const).map(item => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
+            {result.length ? <><div aria-live="polite">{result.slice(Math.min(partnerIndex, result.length - 1), Math.min(partnerIndex, result.length - 1) + 1).map(({ partner, status, reasons }) => <article className="spotlight" key={partner.id}>
+              <div className="spotlight-color"><span className="match-label">{status}</span><div className="spotlight-subject"><span>{partner.name}可以教你</span><h3>{partner.canTeach}</h3><p>{partner.teachGoal}</p></div><div className="spotlight-signature"><span className="portrait-letter" aria-hidden="true">{partner.initial}</span><span>{partner.name}<small>演示伙伴 · {partner.category}</small></span><span className="hand-spark" aria-hidden="true">✳</span></div></div>
+              <div className="spotlight-content"><p className="partner-quote">“{partner.intro}”</p><div className="return-skill"><span>作为交换，TA 想学</span><h4>{partner.wants}</h4><p>{partner.learnGoal}</p></div><p className="spotlight-time">{partner.method}　·　{partner.time}</p><ul className="match-reasons">{reasons.map(reason => <li key={reason}><Icon name="check" />{reason}</li>)}</ul><div className="spotlight-actions"><button className="primary" onClick={() => beginInvite(partner)}>发起互换 <Icon name="arrow" /></button><button className="secondary" onClick={() => setDetail(partner)}>查看详情</button></div></div>
+            </article>)}</div><div className="partner-pagination"><p><strong>{Math.min(partnerIndex + 1, result.length)}</strong> / {result.length} 位伙伴</p><div><button className="secondary" aria-label="上一位伙伴" disabled={partnerIndex === 0} onClick={() => setPartnerIndex(i => Math.max(0, i - 1))}>← 上一位</button><button className="secondary" aria-label="下一位伙伴" disabled={partnerIndex >= result.length - 1} onClick={() => setPartnerIndex(i => Math.min(result.length - 1, i + 1))}>下一位 →</button></div></div></> : <div className="empty-state"><div><Icon name="search" /></div><h3>暂时没有符合当前条件的伙伴</h3><p>试试清空关键词或查看全部结果。</p><button className="primary" onClick={() => { setQuery(''); setFilter('全部') }}>查看全部伙伴</button></div>}
           </section>
         </>}
 
