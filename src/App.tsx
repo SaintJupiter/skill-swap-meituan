@@ -72,7 +72,7 @@ const defaultProfile: SkillProfile = {
 const partners: Partner[] = [
   { id: 1, name: '小林', initial: '林', avatar: 'coral', category: '生活方式', canTeach: '手机摄影', teachGoal: '用自然光拍出一张松弛的人像', wants: 'Python', learnGoal: '自动整理日常表格', method: '线上', time: '周三晚上', timeCompatible: true, intro: '独立摄影爱好者，擅长把构图讲成人人都能上手的小练习。' },
   { id: 2, name: '嘉禾', initial: '禾', avatar: 'mint', category: '生活方式', canTeach: '手机摄影', teachGoal: '掌握三种稳定出片的构图方式', wants: 'Python', learnGoal: '写一个照片批量改名脚本', method: '线上', time: '周末下午', timeCompatible: false, intro: '喜欢城市漫游和纪实摄影，教学会从真实拍摄场景开始。' },
-  { id: 3, name: '安然', initial: '然', avatar: 'violet', category: '生活方式', canTeach: '手机摄影', teachGoal: '用自然光记录有氛围感的日常', wants: '剪辑入门', learnGoal: '完成一支 30 秒生活短片', method: '线上 / 北京同城', time: '工作日晚上', timeCompatible: true, intro: '擅长观察光影，也乐意分享一套不依赖器材的拍摄方法。' },
+  { id: 3, name: '安然', initial: '然', avatar: 'violet', category: '生活方式', canTeach: '手机摄影', teachGoal: '用自然光记录有氛围感的日常', wants: '剪辑入门', learnGoal: '完成一支 30 秒生活短片', method: '北京同城', time: '工作日晚上', timeCompatible: true, intro: '擅长观察光影，也乐意分享一套不依赖器材的拍摄方法。' },
   { id: 4, name: '阿川', initial: '川', avatar: 'blue', category: '音乐', canTeach: '吉他弹唱', teachGoal: '完整弹唱一首喜欢的歌', wants: 'Python', learnGoal: '写一个简单的效率脚本', method: '线上', time: '周四晚上', timeCompatible: true, intro: '从零基础一路自学过来，更知道初学者会在哪些地方卡住。' },
   { id: 5, name: 'Nora', initial: 'N', avatar: 'yellow', category: '语言', canTeach: '英语表达', teachGoal: '完成一段两分钟英文自我介绍', wants: '数据分析', learnGoal: '看懂一张业务数据看板', method: '线上', time: '周二晚上', timeCompatible: true, intro: '互联网出海团队从业者，重视真实场景中的表达自信。' },
   { id: 6, name: '知夏', initial: '夏', avatar: 'pink', category: '设计', canTeach: 'Figma 入门', teachGoal: '独立画出一个移动端页面', wants: '摄影', learnGoal: '为作品集拍一组干净素材', method: '线上', time: '周日晚上', timeCompatible: false, intro: '产品设计师，喜欢用结构和组件帮助新手快速完成第一稿。' },
@@ -80,10 +80,10 @@ const partners: Partner[] = [
   { id: 8, name: '木木', initial: '木', avatar: 'green', category: '效率工具', canTeach: 'Notion', teachGoal: '搭建一套个人知识管理主页', wants: 'Python', learnGoal: '理解自动化脚本的基本思路', method: '线上', time: '周五晚上', timeCompatible: true, intro: '效率工具重度用户，相信好系统应该让人更轻松，而不是更忙。' },
   { id: 9, name: '江野', initial: '野', avatar: 'violet', category: '影像创作', canTeach: '人像摄影', teachGoal: '完成一组有情绪的自然光人像', wants: 'Python', learnGoal: '做一个照片自动归档工具', method: '线上 / 杭州同城', time: '工作日晚上', timeCompatible: true, intro: '自由摄影师，喜欢用简单的光线和动作引导，让普通人也能自然出镜。' },
   { id: 10, name: '小满', initial: '满', avatar: 'pink', category: '内容创作', canTeach: '手机摄影', teachGoal: '拍出一组适合社交媒体发布的照片', wants: 'Figma 入门', learnGoal: '制作一张活动宣传海报', method: '线上', time: '周六上午', timeCompatible: false, intro: '生活方式博主，擅长在日常空间里寻找好看的取景和色彩。' },
-  { id: 11, name: '洛洛', initial: '洛', avatar: 'yellow', category: '生活方式', canTeach: '咖啡手冲', teachGoal: '稳定冲出一杯干净明亮的咖啡', wants: '英语表达', learnGoal: '能用英文介绍不同咖啡豆', method: '线上 / 成都同城', time: '周日下午', timeCompatible: false, intro: '独立咖啡店主理人，愿意把参数背后的味道讲得简单一点。' },
+  { id: 11, name: '洛洛', initial: '洛', avatar: 'yellow', category: '生活方式', canTeach: '咖啡手冲', teachGoal: '稳定冲出一杯干净明亮的咖啡', wants: '英语表达', learnGoal: '能用英文介绍不同咖啡豆', method: '成都同城', time: '周日下午', timeCompatible: false, intro: '独立咖啡店主理人，愿意把参数背后的味道讲得简单一点。' },
   { id: 12, name: '沈言', initial: '言', avatar: 'blue', category: '视觉设计', canTeach: '摄影构图', teachGoal: '用三种构图完成一组城市观察', wants: 'Python', learnGoal: '批量生成作品集文件名', method: '线上', time: '周二晚上', timeCompatible: true, intro: '视觉设计师，习惯从版式和视觉动线解释一张照片为什么成立。' },
   { id: 13, name: 'Luna', initial: 'L', avatar: 'coral', category: '语言', canTeach: '日语会话', teachGoal: '完成一次五分钟旅行场景对话', wants: '手账排版', learnGoal: '做一页清晰的旅行计划', method: '线上', time: '周四晚上', timeCompatible: true, intro: '日语学习社群组织者，重视能马上用上的开口练习。' },
-  { id: 14, name: '程野', initial: '程', avatar: 'navy', category: '城市观察', canTeach: '城市摄影', teachGoal: '完成一组有叙事感的街头照片', wants: 'Python', learnGoal: '整理并筛选大量照片文件', method: '线上 / 上海同城', time: '周末白天', timeCompatible: false, intro: '建筑从业者，擅长从空间、比例和人的关系里寻找画面。' },
+  { id: 14, name: '程野', initial: '程', avatar: 'navy', category: '城市观察', canTeach: '城市摄影', teachGoal: '完成一组有叙事感的街头照片', wants: 'Python', learnGoal: '整理并筛选大量照片文件', method: '上海同城', time: '周末白天', timeCompatible: false, intro: '建筑从业者，擅长从空间、比例和人的关系里寻找画面。' },
 ]
 
 const demoInvites: Invite[] = [
