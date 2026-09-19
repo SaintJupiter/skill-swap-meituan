@@ -1,70 +1,97 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 
-type Partner = {
+type View = 'discover' | 'exchanges' | 'skills'
+type MatchStatus = '双向匹配' | '时间待协商' | '单向符合' | '灵感推荐'
+type InviteStatus = '待确认' | '已约定' | '已取消'
+
+type SkillProfile = {
+  canTeach: string
+  teachGoal: string
+  wants: string
+  learnGoal: string
+  method: string
+  time: string
+  intro: string
+}
+
+type Partner = SkillProfile & {
   id: number
   name: string
   initial: string
   avatar: string
-  status: '双向匹配' | '时间待协商' | '单向符合'
-  canTeach: string
-  canGoal: string
-  wants: string
-  wantsGoal: string
+  category: string
+  timeCompatible: boolean
+}
+
+type Invite = {
+  id: string
+  partnerId: number
+  partnerName: string
+  partnerInitial: string
+  avatar: string
+  teachSkill: string
+  teachGoal: string
+  learnSkill: string
+  learnGoal: string
   method: string
   time: string
-  reasons: string[]
-  note: string
+  message: string
+  status: InviteStatus
+  createdAt: string
+}
+
+const PROFILE_KEY = 'huanyike-profile-v2'
+const INVITES_KEY = 'huanyike-invites-v2'
+
+const defaultProfile: SkillProfile = {
+  canTeach: 'Python',
+  teachGoal: '用 Python 自动整理一份 Excel 表格',
+  wants: '手机摄影',
+  learnGoal: '学会基础构图，拍出一张自然的人像',
+  method: '线上',
+  time: '工作日晚上',
+  intro: '喜欢把复杂问题拆成简单步骤，也愿意认真准备每一次互换。',
 }
 
 const partners: Partner[] = [
-  {
-    id: 1,
-    name: '小林',
-    initial: '林',
-    avatar: 'coral',
-    status: '双向匹配',
-    canTeach: '手机摄影',
-    canGoal: '拍出一张自然的人像',
-    wants: 'Python',
-    wantsGoal: '自动整理日常表格',
-    method: '线上',
-    time: '周三晚上',
-    reasons: ['她能教你手机摄影', '你能教她 Python', '都支持线上交流', '有共同空闲时间'],
-    note: '我会从构图、光线和抓拍节奏开始，带你用手机完成一张有故事感的人像。',
-  },
-  {
-    id: 2,
-    name: '阿川',
-    initial: '川',
-    avatar: 'blue',
-    status: '时间待协商',
-    canTeach: '吉他弹唱',
-    canGoal: '完整弹唱一首喜欢的歌',
-    wants: 'Python',
-    wantsGoal: '写一个简单的效率脚本',
-    method: '线上',
-    time: '周末下午 · 待协商',
-    reasons: ['你可以帮他完成 Python 入门', '他的教学目标清晰可落地', '双方都接受线上互换', '空闲时间需要一起确认'],
-    note: '刚学吉他时我也踩过不少坑，愿意用循序渐进的方式陪你练会第一首歌。',
-  },
-  {
-    id: 3,
-    name: '安然',
-    initial: '然',
-    avatar: 'violet',
-    status: '单向符合',
-    canTeach: '手机摄影',
-    canGoal: '用自然光记录日常',
-    wants: '剪辑入门',
-    wantsGoal: '做出一支 30 秒生活短片',
-    method: '线上 / 北京同城',
-    time: '工作日晚上',
-    reasons: ['她能教你手机摄影', '学习目标和你的需求相近', '可在线上完成第一堂课', '她期待交换剪辑技能'],
-    note: '喜欢在散步时观察光影，也很乐意把好用的手机拍摄小技巧分享给你。',
-  },
+  { id: 1, name: '小林', initial: '林', avatar: 'coral', category: '生活方式', canTeach: '手机摄影', teachGoal: '用自然光拍出一张松弛的人像', wants: 'Python', learnGoal: '自动整理日常表格', method: '线上', time: '周三晚上', timeCompatible: true, intro: '独立摄影爱好者，擅长把构图讲成人人都能上手的小练习。' },
+  { id: 2, name: '嘉禾', initial: '禾', avatar: 'mint', category: '生活方式', canTeach: '手机摄影', teachGoal: '掌握三种稳定出片的构图方式', wants: 'Python', learnGoal: '写一个照片批量改名脚本', method: '线上', time: '周末下午', timeCompatible: false, intro: '喜欢城市漫游和纪实摄影，教学会从真实拍摄场景开始。' },
+  { id: 3, name: '安然', initial: '然', avatar: 'violet', category: '生活方式', canTeach: '手机摄影', teachGoal: '用自然光记录有氛围感的日常', wants: '剪辑入门', learnGoal: '完成一支 30 秒生活短片', method: '线上 / 北京同城', time: '工作日晚上', timeCompatible: true, intro: '擅长观察光影，也乐意分享一套不依赖器材的拍摄方法。' },
+  { id: 4, name: '阿川', initial: '川', avatar: 'blue', category: '音乐', canTeach: '吉他弹唱', teachGoal: '完整弹唱一首喜欢的歌', wants: 'Python', learnGoal: '写一个简单的效率脚本', method: '线上', time: '周四晚上', timeCompatible: true, intro: '从零基础一路自学过来，更知道初学者会在哪些地方卡住。' },
+  { id: 5, name: 'Nora', initial: 'N', avatar: 'yellow', category: '语言', canTeach: '英语表达', teachGoal: '完成一段两分钟英文自我介绍', wants: '数据分析', learnGoal: '看懂一张业务数据看板', method: '线上', time: '周二晚上', timeCompatible: true, intro: '互联网出海团队从业者，重视真实场景中的表达自信。' },
+  { id: 6, name: '知夏', initial: '夏', avatar: 'pink', category: '设计', canTeach: 'Figma 入门', teachGoal: '独立画出一个移动端页面', wants: '摄影', learnGoal: '为作品集拍一组干净素材', method: '线上', time: '周日晚上', timeCompatible: false, intro: '产品设计师，喜欢用结构和组件帮助新手快速完成第一稿。' },
+  { id: 7, name: '一航', initial: '航', avatar: 'navy', category: '职场', canTeach: '演讲表达', teachGoal: '把项目经历讲成三分钟故事', wants: 'Excel', learnGoal: '搭建一份清晰的项目台账', method: '线上 / 上海同城', time: '工作日晚上', timeCompatible: true, intro: '咨询顾问，擅长帮人把复杂内容整理成有重点的表达。' },
+  { id: 8, name: '木木', initial: '木', avatar: 'green', category: '效率工具', canTeach: 'Notion', teachGoal: '搭建一套个人知识管理主页', wants: 'Python', learnGoal: '理解自动化脚本的基本思路', method: '线上', time: '周五晚上', timeCompatible: true, intro: '效率工具重度用户，相信好系统应该让人更轻松，而不是更忙。' },
 ]
 
-function Icon({ name }: { name: 'spark' | 'arrow' | 'close' | 'check' | 'calendar' | 'video' | 'bolt' }) {
+const includesSkill = (source: string, target: string) => {
+  const a = source.toLowerCase().replace(/\s/g, '')
+  const b = target.toLowerCase().replace(/\s/g, '')
+  return a.includes(b) || b.includes(a) || (a.includes('摄影') && b.includes('摄影')) || (a.includes('excel') && b.includes('python'))
+}
+
+function getStatus(profile: SkillProfile, partner: Partner): MatchStatus {
+  const canLearn = includesSkill(profile.wants, partner.canTeach)
+  const canTeachBack = includesSkill(profile.canTeach, partner.wants)
+  if (canLearn && canTeachBack) return partner.timeCompatible ? '双向匹配' : '时间待协商'
+  if (canLearn) return '单向符合'
+  return '灵感推荐'
+}
+
+function getReasons(profile: SkillProfile, partner: Partner) {
+  const canLearn = includesSkill(profile.wants, partner.canTeach)
+  const canTeachBack = includesSkill(profile.canTeach, partner.wants)
+  const reasons: string[] = []
+  if (canLearn) reasons.push(`TA 能教你${partner.canTeach}`)
+  if (canTeachBack) reasons.push(`你能回教 TA ${profile.canTeach}`)
+  if (profile.method.includes('线上') && partner.method.includes('线上')) reasons.push('双方都支持线上交流')
+  reasons.push(partner.timeCompatible ? '有共同空闲时间' : '技能互补，时间需要协商')
+  if (!canLearn && !canTeachBack) reasons.unshift(`${partner.canTeach}是一项可探索的新技能`)
+  return reasons.slice(0, 4)
+}
+
+function Icon({ name }: { name: 'spark' | 'arrow' | 'close' | 'check' | 'calendar' | 'video' | 'bolt' | 'search' | 'swap' | 'book' | 'edit' | 'clock' }) {
   const paths = {
     spark: <path d="m12 3 1.85 5.15L19 10l-5.15 1.85L12 17l-1.85-5.15L5 10l5.15-1.85L12 3Zm6 12 .9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z" />,
     arrow: <path d="M5 12h13m-5-5 5 5-5 5" />,
@@ -73,113 +100,172 @@ function Icon({ name }: { name: 'spark' | 'arrow' | 'close' | 'check' | 'calenda
     calendar: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4m8-4v4M4 10h16" /></>,
     video: <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" /></>,
     bolt: <path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" />,
+    search: <><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></>,
+    swap: <><path d="M7 7h11l-3-3m2 13H6l3 3" /></>,
+    book: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z" /></>,
+    edit: <><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z" /><path d="m13.5 7 3.5 3.5" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   }
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>
 }
 
-function Tag({ children, kind = 'plain' }: { children: React.ReactNode; kind?: string }) {
-  return <span className={`tag ${kind}`}>{children}</span>
-}
-
 function App() {
+  const [view, setView] = useState<View>('discover')
+  const [profile, setProfile] = useState<SkillProfile>(() => {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || '') || defaultProfile } catch { return defaultProfile }
+  })
+  const [invites, setInvites] = useState<Invite[]>(() => {
+    try { return JSON.parse(localStorage.getItem(INVITES_KEY) || '[]') } catch { return [] }
+  })
   const [detail, setDetail] = useState<Partner | null>(null)
-  const [invite, setInvite] = useState<Partner | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [inviteTarget, setInviteTarget] = useState<Partner | null>(null)
+  const [editingSkill, setEditingSkill] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'全部' | '双向匹配' | '线上可学'>('全部')
+  const [showAll, setShowAll] = useState(false)
+  const [inviteTime, setInviteTime] = useState('周三 20:00')
+  const [message, setMessage] = useState('')
+  const [toast, setToast] = useState('')
+  const [expandedInvite, setExpandedInvite] = useState<string | null>(null)
 
+  useEffect(() => { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)) }, [profile])
+  useEffect(() => { localStorage.setItem(INVITES_KEY, JSON.stringify(invites)) }, [invites])
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setDetail(null); setInvite(null); setSuccess(false) }
-    }
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setDetail(null); setInviteTarget(null); setEditingSkill(false) } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(''), 2800)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+  useEffect(() => { setShowAll(false) }, [query, filter])
 
-  const openInvite = (partner: Partner) => { setDetail(null); setInvite(partner); setSuccess(false) }
+  const result = useMemo(() => partners
+    .map(partner => ({ partner, status: getStatus(profile, partner), reasons: getReasons(profile, partner) }))
+    .filter(({ partner, status }) => {
+      const haystack = `${partner.name}${partner.canTeach}${partner.teachGoal}${partner.wants}${partner.category}`.toLowerCase()
+      const matchesQuery = haystack.includes(query.trim().toLowerCase())
+      const matchesFilter = filter === '全部' || (filter === '双向匹配' && status === '双向匹配') || (filter === '线上可学' && partner.method.includes('线上'))
+      return matchesQuery && matchesFilter
+    })
+    .sort((a, b) => ['双向匹配', '时间待协商', '单向符合', '灵感推荐'].indexOf(a.status) - ['双向匹配', '时间待协商', '单向符合', '灵感推荐'].indexOf(b.status)), [profile, query, filter])
+
+  const beginInvite = (partner: Partner) => {
+    setDetail(null)
+    setInviteTarget(partner)
+    setInviteTime(partner.timeCompatible ? partner.time : '时间待协商')
+    setMessage(`我想向你学习${partner.canTeach}，也可以教你${profile.teachGoal}。建议线上互换，双方各 30 分钟。`)
+  }
+
+  const sendInvite = () => {
+    if (!inviteTarget) return
+    const duplicate = invites.some(item => item.partnerId === inviteTarget.id && item.status !== '已取消')
+    if (duplicate) { setInviteTarget(null); setView('exchanges'); setToast('你们已经有一条进行中的互换邀请'); return }
+    const next: Invite = {
+      id: `${Date.now()}`, partnerId: inviteTarget.id, partnerName: inviteTarget.name, partnerInitial: inviteTarget.initial, avatar: inviteTarget.avatar,
+      teachSkill: profile.canTeach, teachGoal: profile.teachGoal, learnSkill: inviteTarget.canTeach, learnGoal: inviteTarget.teachGoal,
+      method: profile.method.includes('线上') && inviteTarget.method.includes('线上') ? '线上' : inviteTarget.method,
+      time: inviteTime, message, status: '待确认',
+      createdAt: new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date()),
+    }
+    setInvites(current => [next, ...current])
+    setInviteTarget(null); setExpandedInvite(next.id); setView('exchanges'); setToast('互换邀请已创建，等待对方确认')
+  }
+
+  const updateInvite = (id: string, status: InviteStatus) => {
+    setInvites(items => items.map(item => item.id === id ? { ...item, status } : item))
+    setToast(status === '已约定' ? '演示：对方已接受，首课计划已生成' : '邀请已取消')
+  }
+
+  const saveProfile = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    setProfile(Object.fromEntries(data.entries()) as unknown as SkillProfile)
+    setEditingSkill(false); setToast('技能卡已更新，推荐结果已重新计算')
+  }
+
+  const resetDemo = () => {
+    if (!window.confirm('确定重置演示数据吗？你的技能卡和邀请记录将恢复默认状态。')) return
+    setProfile(defaultProfile); setInvites([]); setView('discover'); setToast('演示数据已重置')
+  }
+
+  const go = (next: View) => { setView(next); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
   return (
     <div className="app-shell">
+      <div className="ambient-art" aria-hidden="true"><i className="orb-coral" /><i className="orb-violet" /><i className="orb-mint" /></div>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="换一课首页">
-          <span className="brand-mark"><Icon name="spark" /></span>
-          <span>换一课</span><small>SkillSwap</small>
-        </a>
+        <button className="brand" onClick={() => go('discover')} aria-label="换一课首页"><span className="brand-mark"><Icon name="swap" /></span><span>换一课<small>SkillSwap</small></span></button>
         <nav aria-label="主导航">
-          <a className="active" href="#matches">发现互换</a>
-          <a href="#need">我的互换</a>
-          <a href="#need">我的技能</a>
+          <button className={view === 'discover' ? 'active' : ''} onClick={() => go('discover')}>发现互换</button>
+          <button className={view === 'exchanges' ? 'active' : ''} onClick={() => go('exchanges')}>我的互换{invites.filter(i => i.status === '待确认').length > 0 && <b>{invites.filter(i => i.status === '待确认').length}</b>}</button>
+          <button className={view === 'skills' ? 'active' : ''} onClick={() => go('skills')}>我的技能</button>
         </nav>
-        <button className="publish" onClick={() => alert('发布技能功能将在下一版开放。')}><span>＋</span> 发布技能</button>
+        <button className="publish" onClick={() => setEditingSkill(true)}>＋ 发布技能</button>
       </header>
 
-      <main id="top">
-        <section className="intro" aria-labelledby="page-title">
-          <p className="eyebrow">Skill exchange, made human</p>
-          <h1 id="page-title">用你会的，换你想学的。</h1>
-          <p>找到技能互补的人，交换一堂真正想学的课。</p>
-        </section>
+      <div className="demo-strip"><span><i /> 演示模式</span> 操作数据保存在本浏览器，不代表真实用户行为。<button onClick={resetDemo}>重置演示数据</button></div>
 
-        <section className="need-card" id="need" aria-labelledby="need-title">
-          <div className="need-heading">
-            <div><p className="section-kicker">YOUR EXCHANGE</p><h2 id="need-title">我的互换需求</h2></div>
-            <button className="text-button" onClick={() => alert('演示版已为你填入默认需求。')}><span>✎</span> 修改需求</button>
-          </div>
-          <div className="exchange-grid">
-            <article className="skill-side teach-side">
-              <div className="side-title"><span className="mini-icon mint"><Icon name="bolt" /></span> 我能教</div>
-              <h3>Python 入门</h3>
-              <p>用 Python 自动整理一份 Excel 表格</p>
-            </article>
-            <div className="swap-token" aria-label="互换"><Icon name="arrow" /></div>
-            <article className="skill-side learn-side">
-              <div className="side-title"><span className="mini-icon peach"><Icon name="spark" /></span> 我想学</div>
-              <h3>手机摄影</h3>
-              <p>学会基础构图，拍出一张自然的人像</p>
-            </article>
-            <div className="need-meta"><span><Icon name="video" />线上</span><span><Icon name="calendar" />工作日晚上</span></div>
-          </div>
-        </section>
+      <main>
+        {view === 'discover' && <>
+          <section className="hero" aria-labelledby="page-title">
+            <p className="eyebrow">SKILL EXCHANGE · SMALL GOALS, REAL PROGRESS</p>
+            <h1 id="page-title"><span>用你会的，</span><strong>换你想学的。</strong></h1>
+            <p>把一次技能交换拆成明确的小目标，找到愿意彼此认真教一课的人。</p>
+            <div className="hero-stamps" aria-hidden="true"><span>双向互补 ✦</span><span>先约成第一课</span></div>
+          </section>
 
-        <section className="matches" id="matches" aria-labelledby="match-title">
-          <div className="match-heading"><div><p className="section-kicker">FOR YOU</p><h2 id="match-title">推荐交换伙伴</h2><p>不是模糊的分数，而是看得见的互补。</p></div><div className="count-chip"><span>3</span> 位伙伴</div></div>
-          <div className="partner-grid">
-            {partners.map((partner) => (
-              <article className="partner-card" key={partner.id}>
-                <header className="partner-head">
-                  <div className={`avatar ${partner.avatar}`}>{partner.initial}</div>
-                  <div><h3>{partner.name}</h3><p>{partner.note}</p></div>
-                  <Tag kind={partner.status === '双向匹配' ? 'mutual' : partner.status === '时间待协商' ? 'pending' : 'oneway'}>{partner.status}</Tag>
-                </header>
-                <div className="lesson-pair">
-                  <div><span className="lesson-label">她能教</span><strong>{partner.canTeach}</strong><p>{partner.canGoal}</p></div>
-                  <div><span className="lesson-label">她想学</span><strong>{partner.wants}</strong><p>{partner.wantsGoal}</p></div>
-                </div>
-                <div className="availability"><span><Icon name="video" />{partner.method}</span><span><Icon name="calendar" />{partner.time}</span></div>
-                <div className="why"><h4>{partner.status === '双向匹配' ? '为什么推荐给你' : '符合你的地方'}</h4><ul>{partner.reasons.map((reason) => <li key={reason}><Icon name="check" />{reason}</li>)}</ul></div>
-                <footer><button className="secondary" onClick={() => setDetail(partner)}>查看详情 <Icon name="arrow" /></button><button className="primary" onClick={() => openInvite(partner)}>发起互换</button></footer>
-              </article>
-            ))}
-          </div>
-        </section>
+          <section className="need-card" aria-labelledby="need-title">
+            <div className="need-aside"><p className="section-kicker">YOUR EXCHANGE</p><h2 id="need-title">我的互换需求</h2><p>{profile.intro}</p><button className="link-button" onClick={() => setEditingSkill(true)}><Icon name="edit" /> 修改需求</button></div>
+            <div className="exchange-flow">
+              <article className="skill-side teach-side"><div className="side-title"><span className="mini-icon"><Icon name="bolt" /></span>我能教</div><h3>{profile.canTeach}</h3><p>{profile.teachGoal}</p></article>
+              <div className="swap-token" aria-label="互换"><Icon name="swap" /></div>
+              <article className="skill-side learn-side"><div className="side-title"><span className="mini-icon"><Icon name="spark" /></span>我想学</div><h3>{profile.wants}</h3><p>{profile.learnGoal}</p></article>
+              <div className="need-meta"><span><Icon name="video" />{profile.method}</span><span><Icon name="calendar" />{profile.time}</span><span><Icon name="clock" />默认各 30 分钟</span></div>
+            </div>
+          </section>
+
+          <section className="matches" aria-labelledby="match-title">
+            <div className="match-heading"><div><p className="section-kicker">MATCH WORKBENCH</p><h2 id="match-title">找到下一位互换伙伴</h2><p>推荐理由来自双方真实字段，不用虚构匹配分数。</p></div><div className="result-count"><strong>{result.length}</strong><span>位演示伙伴</span></div></div>
+            <div className="filterbar"><label className="search"><Icon name="search" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索想学的技能、目标或昵称" /><kbd>⌘ K</kbd></label><div className="filter-pills">{(['全部', '双向匹配', '线上可学'] as const).map(item => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
+            {result.length ? <><div className={`partner-grid ${showAll ? 'expanded' : ''}`}>{result.slice(0, showAll ? result.length : 3).map(({ partner, status, reasons }, index) => <article className={`partner-card ${index === 0 && status === '双向匹配' ? 'featured-match' : ''}`} key={partner.id}>
+              <header className="partner-head"><div className={`avatar ${partner.avatar}`}>{partner.initial}</div><div><div className="name-line"><h3>{partner.name}</h3><span>演示用户</span></div><p>{partner.intro}</p></div><span className={`tag ${status === '双向匹配' ? 'mutual' : status === '时间待协商' ? 'pending' : status === '单向符合' ? 'oneway' : 'explore'}`}>{status}</span></header>
+              {index === 0 && <div className="best-ribbon">BEST MUTUAL MATCH</div>}
+              <div className="lesson-pair"><div className="teach"><span>TA 能教</span><strong>{partner.canTeach}</strong><p>{partner.teachGoal}</p></div><div className="learn"><span>TA 想学</span><strong>{partner.wants}</strong><p>{partner.learnGoal}</p></div></div>
+              <div className="availability"><span><Icon name="video" />{partner.method}</span><span><Icon name="calendar" />{partner.time}</span></div>
+              <div className="why"><h4>为什么推荐</h4><ul>{reasons.map(reason => <li key={reason}><Icon name="check" />{reason}</li>)}</ul></div>
+              <footer><button className="secondary" onClick={() => setDetail(partner)}>查看详情</button><button className="primary" onClick={() => beginInvite(partner)}>发起互换 <Icon name="arrow" /></button></footer>
+            </article>)}</div>{result.length > 3 && <div className="more-row"><div><span>{showAll ? '已展示全部演示伙伴' : `还有 ${result.length - 3} 位可探索伙伴`}</span><p>先聚焦最相关的人选，需要时再展开浏览。</p></div><button className="secondary more-button" onClick={() => setShowAll(value => !value)}>{showAll ? '收起更多伙伴' : '查看更多伙伴'} <Icon name="arrow" /></button></div>}</> : <div className="empty-state"><div><Icon name="search" /></div><h3>暂时没有符合当前条件的伙伴</h3><p>试试清空关键词或查看全部结果，也可以修改你的学习目标。</p><button className="primary" onClick={() => { setQuery(''); setFilter('全部') }}>查看全部伙伴</button></div>}
+          </section>
+        </>}
+
+        {view === 'skills' && <section className="workspace-page">
+          <div className="page-heading"><div><p className="section-kicker">MY SKILL CARD</p><h1>让别人一眼看懂，<br /><span>你们可以怎样互换。</span></h1><p>具体目标比技能名称更重要。编辑后，发现页会立即重新计算匹配结果。</p></div><button className="publish large" onClick={() => setEditingSkill(true)}>编辑技能卡 <Icon name="edit" /></button></div>
+          <div className="skill-management"><aside><span>01 / ACTIVE CARD</span><strong>1</strong><p>当前发布中的互换需求</p><span>02 / VISIBILITY</span><strong>公开演示</strong><p>仅用于当前作品体验</p></aside><article className="profile-card"><div className="profile-card-top"><div className="avatar navy">周</div><div><span>演示身份</span><h2>小周的技能卡</h2><p>{profile.intro}</p></div><button className="icon-button" onClick={() => setEditingSkill(true)} aria-label="编辑技能卡"><Icon name="edit" /></button></div><div className="profile-exchange"><div><span>我能教</span><h3>{profile.canTeach}</h3><p>{profile.teachGoal}</p></div><div className="vertical-swap"><Icon name="swap" /></div><div><span>我想学</span><h3>{profile.wants}</h3><p>{profile.learnGoal}</p></div></div><div className="profile-meta"><span><Icon name="video" />{profile.method}</span><span><Icon name="calendar" />{profile.time}</span></div><button className="primary full" onClick={() => setEditingSkill(true)}>修改这张技能卡</button></article><div className="principle-card"><span>PRODUCT PRINCIPLE</span><h3>交换的不是标签，<br />是一件能完成的小事。</h3><p>技能卡要求双方说清楚“能带对方完成什么”和“自己想学到什么”，减少匹配后的协商成本。</p></div></div>
+        </section>}
+
+        {view === 'exchanges' && <section className="workspace-page">
+          <div className="page-heading"><div><p className="section-kicker">MY EXCHANGES</p><h1>从发出邀请，<br /><span>走到约成第一课。</span></h1><p>邀请不等于成功。只有对方确认后，才进入具体的首课计划。</p></div><div className="status-summary"><div><strong>{invites.filter(i => i.status === '待确认').length}</strong><span>等待确认</span></div><div><strong>{invites.filter(i => i.status === '已约定').length}</strong><span>已经约定</span></div></div></div>
+          {invites.length === 0 ? <div className="empty-state exchange-empty"><div><Icon name="swap" /></div><h3>还没有发出的互换邀请</h3><p>去发现页选择一位伙伴，提出一份具体的第一课交换计划。</p><button className="primary" onClick={() => go('discover')}>发现互换伙伴 <Icon name="arrow" /></button></div> : <div className="invite-list">{invites.map(invite => <article className={`invite-card ${invite.status === '已取消' ? 'cancelled' : ''}`} key={invite.id}>
+            <div className="invite-main"><div className={`avatar large ${invite.avatar}`}>{invite.partnerInitial}</div><div className="invite-title"><span>与 {invite.partnerName} 的技能互换</span><h2>{invite.learnSkill} <small>×</small> {invite.teachSkill}</h2><p>创建于 {invite.createdAt}</p></div><span className={`status-badge ${invite.status === '已约定' ? 'agreed' : invite.status === '已取消' ? 'cancelled-badge' : ''}`}>{invite.status}</span></div>
+            <div className="invite-snapshot"><div><span>你来教</span><strong>{invite.teachSkill}</strong><p>{invite.teachGoal}</p></div><div><span>你来学</span><strong>{invite.learnSkill}</strong><p>{invite.learnGoal}</p></div><div><span>拟定安排</span><strong>{invite.method}</strong><p>{invite.time} · 双方各 30 分钟</p></div></div>
+            {expandedInvite === invite.id && <div className="invite-detail"><p className="invite-message">“{invite.message}”</p>{invite.status === '已约定' && <div className="lesson-plan"><div className="plan-heading"><span><Icon name="book" /> 首课计划模板</span><small>双方可共同修改</small></div><div className="plan-grid"><div><b>01 / 你来教 · 30 分钟</b><h3>{invite.teachSkill}</h3><p>目标：{invite.teachGoal}</p><span>准备一份可公开使用的示例材料</span></div><div><b>02 / 你来学 · 30 分钟</b><h3>{invite.learnSkill}</h3><p>目标：{invite.learnGoal}</p><span>准备手机，并提前选好练习场景</span></div></div></div>}</div>}
+            <footer><button className="secondary" onClick={() => setExpandedInvite(expandedInvite === invite.id ? null : invite.id)}>{expandedInvite === invite.id ? '收起详情' : '查看详情'}</button>{invite.status === '待确认' && <><button className="text-danger" onClick={() => updateInvite(invite.id, '已取消')}>取消邀请</button><button className="demo-action" onClick={() => updateInvite(invite.id, '已约定')}>演示控制 · 模拟对方接受</button></>}{invite.status === '已约定' && <button className="primary" onClick={() => setExpandedInvite(invite.id)}>查看首课计划 <Icon name="arrow" /></button>}</footer>
+          </article>)}</div>}
+        </section>}
       </main>
-      <footer className="site-footer"><span className="brand-mark small"><Icon name="spark" /></span><span>换一课 · 把会的变成彼此的下一课</span><span>© 2026 SkillSwap</span></footer>
 
-      {detail && <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDetail(null)}>
-        <section className="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-          <button className="modal-close" onClick={() => setDetail(null)} aria-label="关闭"><Icon name="close" /></button>
-          <div className="modal-person"><div className={`avatar large ${detail.avatar}`}>{detail.initial}</div><div><Tag kind={detail.status === '双向匹配' ? 'mutual' : detail.status === '时间待协商' ? 'pending' : 'oneway'}>{detail.status}</Tag><h2 id="detail-title">和 {detail.name} 换一课</h2><p>{detail.note}</p></div></div>
-          <div className="modal-exchange"><div><span>对方能教</span><strong>{detail.canTeach}</strong><p>{detail.canGoal}</p></div><div className="modal-arrow"><Icon name="arrow" /></div><div><span>对方想学</span><strong>{detail.wants}</strong><p>{detail.wantsGoal}</p></div></div>
-          <div className="modal-facts"><div><Icon name="video" /><span>方式</span><strong>{detail.method}</strong></div><div><Icon name="calendar" /><span>时间</span><strong>{detail.time}</strong></div></div>
-          <div className="why modal-why"><h4>为什么匹配</h4><ul>{detail.reasons.map((reason) => <li key={reason}><Icon name="check" />{reason}</li>)}</ul></div>
-          <button className="primary modal-action" onClick={() => openInvite(detail)}>发起互换</button>
-        </section>
-      </div>}
+      <footer className="site-footer"><div><span className="brand-mark small"><Icon name="swap" /></span><strong>换一课</strong><span>用明确的小目标，换一堂真正想学的课。</span></div><div><button onClick={() => go('discover')}>发现互换</button><button onClick={() => go('exchanges')}>我的互换</button><button onClick={resetDemo}>重置数据</button></div><small>演示原型 · 数据仅保存在本浏览器</small></footer>
 
-      {invite && <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setInvite(null)}>
-        <section className="modal invite-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
-          <button className="modal-close" onClick={() => setInvite(null)} aria-label="关闭"><Icon name="close" /></button>
-          {!success ? <><div className="modal-top-icon"><Icon name="spark" /></div><p className="section-kicker">READY TO SWAP</p><h2 id="invite-title">向 {invite.name} 发起互换</h2><p className="invite-intro">确认后会把这份邀请发送给对方。</p><div className="invite-copy">我想向你学习{invite.canTeach}，也可以教你用 Python 整理表格。建议线上互换，双方各 30 分钟。</div><div className="modal-buttons"><button className="secondary plain" onClick={() => setInvite(null)}>暂不发送</button><button className="primary" onClick={() => setSuccess(true)}>确认发起</button></div></> : <><div className="success-icon"><Icon name="check" /></div><h2 id="invite-title">互换邀请已创建</h2><p className="success-copy">等待 {invite.name} 确认。收到回复后，我们会为你准备下一步安排。</p><button className="primary full" onClick={() => setInvite(null)}>知道了</button></>}
-        </section>
-      </div>}
+      {detail && <div className="overlay" onMouseDown={e => e.target === e.currentTarget && setDetail(null)}><section className="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title"><button className="modal-close" onClick={() => setDetail(null)} aria-label="关闭"><Icon name="close" /></button><div className="modal-person"><div className={`avatar large ${detail.avatar}`}>{detail.initial}</div><div><span className={`tag static-tag ${getStatus(profile, detail) === '双向匹配' ? 'mutual' : 'pending'}`}>{getStatus(profile, detail)}</span><h2 id="detail-title">和 {detail.name} 换一课</h2><p>{detail.intro}</p></div></div><div className="modal-exchange"><div><span>TA 能教你</span><strong>{detail.canTeach}</strong><p>{detail.teachGoal}</p></div><div className="modal-arrow"><Icon name="swap" /></div><div><span>你能回教</span><strong>{profile.canTeach}</strong><p>{profile.teachGoal}</p></div></div><div className="modal-facts"><div><Icon name="video" /><span>方式</span><strong>{detail.method}</strong></div><div><Icon name="calendar" /><span>时间</span><strong>{detail.time}</strong></div></div><div className="why modal-why"><h4>为什么匹配</h4><ul>{getReasons(profile, detail).map(reason => <li key={reason}><Icon name="check" />{reason}</li>)}</ul></div><button className="primary full modal-action" onClick={() => beginInvite(detail)}>发起互换邀请 <Icon name="arrow" /></button></section></div>}
+
+      {inviteTarget && <div className="overlay" onMouseDown={e => e.target === e.currentTarget && setInviteTarget(null)}><section className="modal invite-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title"><button className="modal-close" onClick={() => setInviteTarget(null)} aria-label="关闭"><Icon name="close" /></button><p className="section-kicker">EXCHANGE PROPOSAL</p><h2 id="invite-title">向 {inviteTarget.name} 发起互换</h2><p className="modal-lead">把想交换的内容和时间说清楚，对方确认后才算约定成功。</p><div className="proposal-pair"><span>你教 <b>{profile.canTeach}</b></span><Icon name="swap" /><span>你学 <b>{inviteTarget.canTeach}</b></span></div><label className="field"><span>拟定时间</span><input value={inviteTime} onChange={e => setInviteTime(e.target.value)} required /></label><label className="field"><span>邀请留言</span><textarea value={message} onChange={e => setMessage(e.target.value)} rows={5} /></label><div className="modal-buttons"><button className="secondary plain" onClick={() => setInviteTarget(null)}>暂不发送</button><button className="primary" onClick={sendInvite}>发送互换邀请</button></div></section></div>}
+
+      {editingSkill && <div className="overlay" onMouseDown={e => e.target === e.currentTarget && setEditingSkill(false)}><section className="modal form-modal" role="dialog" aria-modal="true" aria-labelledby="skill-form-title"><button className="modal-close" onClick={() => setEditingSkill(false)} aria-label="关闭"><Icon name="close" /></button><p className="section-kicker">EDIT SKILL CARD</p><h2 id="skill-form-title">编辑我的互换需求</h2><p className="modal-lead">用一个可完成的小目标，让对方知道这一课能带走什么。</p><form onSubmit={saveProfile}><div className="form-grid"><label className="field"><span>我能教的技能 *</span><input name="canTeach" defaultValue={profile.canTeach} required /></label><label className="field"><span>我想学的技能 *</span><input name="wants" defaultValue={profile.wants} required /></label><label className="field wide"><span>我能带对方完成什么 *</span><textarea name="teachGoal" defaultValue={profile.teachGoal} required rows={2} /></label><label className="field wide"><span>我的学习目标 *</span><textarea name="learnGoal" defaultValue={profile.learnGoal} required rows={2} /></label><label className="field"><span>交流方式 *</span><select name="method" defaultValue={profile.method}><option>线上</option><option>线下</option><option>线上 / 线下均可</option></select></label><label className="field"><span>通常方便的时间 *</span><input name="time" defaultValue={profile.time} required /></label><label className="field wide"><span>一句话介绍</span><textarea name="intro" defaultValue={profile.intro} rows={2} /></label></div><div className="form-note"><Icon name="check" /> 保存后会更新技能卡，并重新计算推荐结果。</div><div className="modal-buttons"><button type="button" className="secondary plain" onClick={() => setEditingSkill(false)}>取消</button><button className="primary" type="submit">保存并重新匹配</button></div></form></section></div>}
+
+      {toast && <div className="toast" role="status"><Icon name="check" />{toast}</div>}
     </div>
   )
 }
