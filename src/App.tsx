@@ -211,7 +211,7 @@ function App() {
         {view === 'discover' && <>
           <section className="exchange-hero" aria-labelledby="page-title">
             <div className="hero-copy"><p className="hero-label">你的一技之长，也能点亮别人。</p><h1 id="page-title">用你会的，<br /><em>换你想学的。</em></h1><p className="hero-description">找到技能互补的人，<br />交换一堂真正想学的课。</p><a className="hero-cta" href="#match-title">遇见互换伙伴 <Icon name="arrow" /></a><span className="hero-footnote">不必是专家。从你会的一件小事开始。</span></div>
-            <div className="hero-art"><img src={`${import.meta.env.BASE_URL}images/gumroad-side-project.svg`} alt="Gumroad 抽象漫画人物插画" /><span className="art-caption">一点拿手的，换一点新鲜的。</span><a className="art-credit" href="https://gumroad.com/" target="_blank" rel="noreferrer">Illustration: Gumroad ↗</a></div>
+            <div className="hero-art"><img src={`${import.meta.env.BASE_URL}images/gumroad-side-project.svg?v=skill-swap`} alt="人物举着平板，气泡中写着换一课" /><span className="art-caption">一点拿手的，换一点新鲜的。</span><a className="art-credit" href="https://gumroad.com/" target="_blank" rel="noreferrer">Illustration: Gumroad ↗</a></div>
           </section>
 
           <section className="need-strip" aria-labelledby="need-title">
