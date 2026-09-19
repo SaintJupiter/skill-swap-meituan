@@ -219,7 +219,7 @@ function App() {
           </section>
 
           <section className="matches" aria-labelledby="match-title">
-            <div className="match-heading"><div><p className="section-kicker">MEET YOUR NEXT TEACHER</p><h2 id="match-title">下一课，跟谁学？</h2></div><p>从一个人、一个小目标开始。</p></div>
+            <div className="match-heading"><div><p className="section-kicker">YOUR EXCHANGE CIRCLE</p><h2 id="match-title">为你找到 <em>{result.length}</em> 位互换伙伴</h2></div><p>一次看一位，认真选择真正互补的人。</p></div>
             <div className="filterbar"><label className="search"><Icon name="search" /><input aria-label="搜索伙伴" value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索技能或昵称" /></label><div className="filter-pills">{(['全部', '双向匹配', '线上可学'] as const).map(item => <button key={item} className={filter === item ? 'selected' : ''} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
             {result.length ? <><div aria-live="polite">{result.slice(Math.min(partnerIndex, result.length - 1), Math.min(partnerIndex, result.length - 1) + 1).map(({ partner, status, reasons }) => <article className="spotlight" key={partner.id}>
               <div className="spotlight-color"><span className="match-label">{status}</span><div className="spotlight-subject"><span>{partner.name}可以教你</span><h3>{partner.canTeach}</h3><p>{partner.teachGoal}</p></div><div className="spotlight-signature"><span className="portrait-letter" aria-hidden="true">{partner.initial}</span><span>{partner.name}<small>演示伙伴 · {partner.category}</small></span><span className="hand-spark" aria-hidden="true">✳</span></div></div>
